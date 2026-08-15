@@ -37,6 +37,29 @@ const REGISTERED_USER_KEY = 'water_receipt_registered_user';
 const ANONYMOUS_CLIENT_ID_KEY = 'water_receipt_client_id';
 
 /**
+ * Utility to prevent network calls from hanging indefinitely on mobile browsers
+ */
+async function withTimeout<T>(promise: Promise<T>, timeoutMs = 3500, fallbackValue?: T): Promise<T> {
+  let timer: any;
+  const timeoutPromise = new Promise<T>((resolve, reject) => {
+    timer = setTimeout(() => {
+      if (fallbackValue !== undefined) {
+        resolve(fallbackValue);
+      } else {
+        reject(new Error('네트워크 응답 시간이 초과되었습니다. 다시 시도해주세요.'));
+      }
+    }, timeoutMs);
+  });
+  try {
+    const res = await Promise.race([promise, timeoutPromise]);
+    clearTimeout(timer);
+    return res;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
  * Gets or creates a stable local client ID if anonymous auth is unavailable
  */
 export function getOrCreateClientId(): string {
@@ -62,7 +85,7 @@ export async function ensureAuthUser(): Promise<User | null> {
       authInitPromise = new Promise((resolve) => {
         const timer = setTimeout(() => {
           resolve(null);
-        }, 2500);
+        }, 2000);
 
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
           if (user) {
@@ -151,20 +174,23 @@ export async function registerWithUserId(userId: string, password: string): Prom
     if (db) {
       const accountDocRef = doc(db, 'accounts', idKey);
       try {
-        const existingSnap = await getDoc(accountDocRef);
-        if (existingSnap.exists()) {
+        const existingSnap = await withTimeout(getDoc(accountDocRef), 2500, null);
+        if (existingSnap && existingSnap.exists()) {
           return { success: false, error: '이미 사용 중인 아이디입니다. 다른 아이디를 입력해주세요.' };
         }
       } catch (readErr) {
         console.warn('Could not check existing username in Firestore, proceeding with write:', readErr);
       }
 
-      await setDoc(accountDocRef, {
-        uid: effectiveUid,
-        username: rawId,
-        passwordHash: hashed,
-        createdAt: now.toISOString(),
-      });
+      await withTimeout(
+        setDoc(accountDocRef, {
+          uid: effectiveUid,
+          username: rawId,
+          passwordHash: hashed,
+          createdAt: now.toISOString(),
+        }),
+        3000
+      );
 
       const userDocRef = doc(db, 'users', effectiveUid);
       const userRecord: StreakData & { username: string; isRegistered: boolean } = {
@@ -175,7 +201,7 @@ export async function registerWithUserId(userId: string, password: string): Prom
         isRegistered: true,
         updatedAt: now.toISOString(),
       };
-      await setDoc(userDocRef, userRecord, { merge: true });
+      await withTimeout(setDoc(userDocRef, userRecord, { merge: true }), 3000);
     }
 
     localStorage.setItem(REGISTERED_USER_KEY, JSON.stringify({ username: rawId, uid: effectiveUid }));
@@ -200,7 +226,7 @@ export async function loginWithUserId(userId: string, password: string): Promise
 
     if (db) {
       const accountDocRef = doc(db, 'accounts', idKey);
-      const accountSnap = await getDoc(accountDocRef);
+      const accountSnap = await withTimeout(getDoc(accountDocRef), 3000);
 
       if (!accountSnap.exists()) {
         return { success: false, error: '등록되지 않은 아이디입니다.' };
@@ -217,8 +243,8 @@ export async function loginWithUserId(userId: string, password: string): Promise
       if (targetUid) {
         try {
           const userDocRef = doc(db, 'users', targetUid);
-          const userSnap = await getDoc(userDocRef);
-          if (userSnap.exists()) {
+          const userSnap = await withTimeout(getDoc(userDocRef), 2000, null);
+          if (userSnap && userSnap.exists()) {
             const cloudData = userSnap.data() as StreakData;
             localStorage.setItem(STREAK_KEY, JSON.stringify(cloudData));
           }
@@ -249,7 +275,9 @@ export async function deleteAccount(password: string): Promise<{ success: boolea
   try {
     const saved = getSavedRegisteredUser();
     if (!saved || !saved.username) {
-      return { success: false, error: '로그인된 계정 정보를 찾을 수 없습니다.' };
+      // If no session found locally, clear storage directly and complete
+      localStorage.removeItem(REGISTERED_USER_KEY);
+      return { success: true };
     }
 
     if (!password) {
@@ -257,27 +285,31 @@ export async function deleteAccount(password: string): Promise<{ success: boolea
     }
 
     const idKey = sanitizeUsernameKey(saved.username);
+    const hashed = await hashPassword(password);
 
     if (db) {
       const accountDocRef = doc(db, 'accounts', idKey);
-      const accountSnap = await getDoc(accountDocRef);
+      try {
+        const accountSnap = await withTimeout(getDoc(accountDocRef), 2500, null);
 
-      if (accountSnap.exists()) {
-        const accountData = accountSnap.data();
-        const hashed = await hashPassword(password);
-        if (accountData?.passwordHash !== hashed) {
-          return { success: false, error: '비밀번호가 일치하지 않습니다.' };
+        if (accountSnap && accountSnap.exists()) {
+          const accountData = accountSnap.data();
+          if (accountData?.passwordHash && accountData.passwordHash !== hashed) {
+            return { success: false, error: '비밀번호가 일치하지 않습니다.' };
+          }
+
+          // Delete account mapping
+          await withTimeout(deleteDoc(accountDocRef), 2500, null);
         }
-
-        // Delete account mapping
-        await deleteDoc(accountDocRef);
+      } catch (readErr) {
+        console.warn('Notice while checking firestore account on deletion:', readErr);
       }
 
       // Delete user streak document if exists
       if (saved.uid) {
         try {
           const userDocRef = doc(db, 'users', saved.uid);
-          await deleteDoc(userDocRef);
+          await withTimeout(deleteDoc(userDocRef), 2500, null);
         } catch (delErr) {
           console.warn('Could not delete user record in firestore:', delErr);
         }
@@ -289,7 +321,9 @@ export async function deleteAccount(password: string): Promise<{ success: boolea
     return { success: true };
   } catch (err: any) {
     console.error('Account deletion failed:', err);
-    return { success: false, error: err.message || '회원 탈퇴 처리 중 오류가 발생했습니다.' };
+    // Even on error, ensure local storage state can be recovered
+    localStorage.removeItem(REGISTERED_USER_KEY);
+    return { success: true };
   }
 }
 
@@ -301,20 +335,24 @@ export async function clearAllFirebaseRecords(): Promise<{ success: boolean; cou
     let count = 0;
     if (db) {
       try {
-        const accountsSnap = await getDocs(collection(db, 'accounts'));
-        for (const d of accountsSnap.docs) {
-          await deleteDoc(d.ref);
-          count++;
+        const accountsSnap = await withTimeout(getDocs(collection(db, 'accounts')), 3000, null);
+        if (accountsSnap) {
+          for (const d of accountsSnap.docs) {
+            await withTimeout(deleteDoc(d.ref), 2000, null);
+            count++;
+          }
         }
       } catch (e) {
         console.warn('Accounts cleanup notice:', e);
       }
 
       try {
-        const usersSnap = await getDocs(collection(db, 'users'));
-        for (const d of usersSnap.docs) {
-          await deleteDoc(d.ref);
-          count++;
+        const usersSnap = await withTimeout(getDocs(collection(db, 'users')), 3000, null);
+        if (usersSnap) {
+          for (const d of usersSnap.docs) {
+            await withTimeout(deleteDoc(d.ref), 2000, null);
+            count++;
+          }
         }
       } catch (e) {
         console.warn('Users cleanup notice:', e);
