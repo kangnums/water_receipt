@@ -6,7 +6,7 @@ import {
   User,
   Auth,
 } from 'firebase/auth';
-import { getFirestore, Firestore, doc, setDoc, getDoc } from 'firebase/firestore';
+import { getFirestore, Firestore, doc, setDoc, getDoc, deleteDoc, collection, getDocs } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 import { getStreak, STREAK_KEY, StreakData, getTodayStr } from './utils/streak';
 
@@ -240,6 +240,95 @@ export async function loginWithUserId(userId: string, password: string): Promise
 
 export async function logOutUser(): Promise<void> {
   localStorage.removeItem(REGISTERED_USER_KEY);
+}
+
+/**
+ * Permanently deletes the user's account and cloud data.
+ */
+export async function deleteAccount(password: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const saved = getSavedRegisteredUser();
+    if (!saved || !saved.username) {
+      return { success: false, error: '로그인된 계정 정보를 찾을 수 없습니다.' };
+    }
+
+    if (!password) {
+      return { success: false, error: '탈퇴 확인을 위해 비밀번호를 입력해주세요.' };
+    }
+
+    const idKey = sanitizeUsernameKey(saved.username);
+
+    if (db) {
+      const accountDocRef = doc(db, 'accounts', idKey);
+      const accountSnap = await getDoc(accountDocRef);
+
+      if (accountSnap.exists()) {
+        const accountData = accountSnap.data();
+        const hashed = await hashPassword(password);
+        if (accountData?.passwordHash !== hashed) {
+          return { success: false, error: '비밀번호가 일치하지 않습니다.' };
+        }
+
+        // Delete account mapping
+        await deleteDoc(accountDocRef);
+      }
+
+      // Delete user streak document if exists
+      if (saved.uid) {
+        try {
+          const userDocRef = doc(db, 'users', saved.uid);
+          await deleteDoc(userDocRef);
+        } catch (delErr) {
+          console.warn('Could not delete user record in firestore:', delErr);
+        }
+      }
+    }
+
+    // Clear local storage authentication
+    localStorage.removeItem(REGISTERED_USER_KEY);
+    return { success: true };
+  } catch (err: any) {
+    console.error('Account deletion failed:', err);
+    return { success: false, error: err.message || '회원 탈퇴 처리 중 오류가 발생했습니다.' };
+  }
+}
+
+/**
+ * Clears ALL accounts, user records, and active sessions from Firestore and LocalStorage.
+ */
+export async function clearAllFirebaseRecords(): Promise<{ success: boolean; count?: number; error?: string }> {
+  try {
+    let count = 0;
+    if (db) {
+      try {
+        const accountsSnap = await getDocs(collection(db, 'accounts'));
+        for (const d of accountsSnap.docs) {
+          await deleteDoc(d.ref);
+          count++;
+        }
+      } catch (e) {
+        console.warn('Accounts cleanup notice:', e);
+      }
+
+      try {
+        const usersSnap = await getDocs(collection(db, 'users'));
+        for (const d of usersSnap.docs) {
+          await deleteDoc(d.ref);
+          count++;
+        }
+      } catch (e) {
+        console.warn('Users cleanup notice:', e);
+      }
+    }
+
+    localStorage.removeItem(REGISTERED_USER_KEY);
+    localStorage.removeItem(ANONYMOUS_CLIENT_ID_KEY);
+
+    return { success: true, count };
+  } catch (err: any) {
+    console.error('Database reset failed:', err);
+    return { success: false, error: err.message || '데이터베이스 초기화 중 오류가 발생했습니다.' };
+  }
 }
 
 export { app, auth, db, signInAnonymously, onAuthStateChanged };

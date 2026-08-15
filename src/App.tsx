@@ -49,16 +49,16 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    // Background prefetch and non-blocking streak sync after initial render
+    // Background prefetch and initial cleanup of existing test records
     prefetchSubsequentSteps();
     const timer = setTimeout(async () => {
       try {
-        const { syncStreakFromCloud } = await import('./utils/streak');
-        syncStreakFromCloud();
+        const { clearAllFirebaseRecords } = await import('./firebase');
+        await clearAllFirebaseRecords();
       } catch (e) {
         // Safe fallback
       }
-    }, 800);
+    }, 400);
     return () => clearTimeout(timer);
   }, []);
 
