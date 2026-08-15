@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background-color: #0F172A;
+    color: #F8FAFC;
+    overscroll-behavior-y: none;
+  }
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Perforated receipt edges */
+.receipt {
+  position: relative;
+}
+
+.receipt::before, .receipt::after {
+  content: "";
+  position: absolute; 
+  left: 0; 
+  right: 0; 
+  height: 12px;
+  background-image: radial-gradient(circle at 10px 10px, #0F172A 7px, transparent 7.5px);
+  background-size: 20px 20px;
+  background-repeat: repeat-x;
+}
+
+.receipt::before { 
+  top: -6px; 
+  background-position: 0 -7px; 
+}
+
+.receipt::after { 
+  bottom: -6px; 
+  transform: rotate(180deg); 
+  background-position: 0 -7px; 
+}
+
+/* Range input styling */
+input[type=range] {
+  -webkit-appearance: none; 
+  appearance: none;
+  height: 6px; 
+  border-radius: 999px; 
+  background: #334155; 
+  outline: none;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; 
+  appearance: none;
+  width: 22px; 
+  height: 22px; 
+  border-radius: 999px;
+  background: #10B981; 
+  border: 3px solid #F8FAFC; 
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  transition: transform 0.15s ease;
+}
+
+input[type=range]::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+
+input[type=range]::-moz-range-thumb {
+  width: 22px; 
+  height: 22px; 
+  border-radius: 999px;
+  background: #10B981; 
+  border: 3px solid #F8FAFC; 
+  cursor: pointer;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { 
+  width: 6px; 
+}
+
+::-webkit-scrollbar-thumb { 
+  background: #334155; 
+  border-radius: 999px; 
+}
+
+/* Story 9:16 frame */
+.story-frame {
+  aspect-ratio: 9 / 16;
+}
+
+/* Custom barcode line */
+.barcode-bar {
+  background-color: #0F172A;
+}
+

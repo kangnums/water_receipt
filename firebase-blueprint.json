@@ -1,0 +1,34 @@
+{
+  "entities": {
+    "UserStreak": {
+      "title": "User Streak",
+      "description": "User water receipt streak data",
+      "type": "object",
+      "properties": {
+        "streak": {
+          "type": "number",
+          "description": "Current consecutive streak days"
+        },
+        "lastDate": {
+          "type": "string",
+          "description": "Last recorded date string (YYYY-MM-DD)"
+        },
+        "lastTimestamp": {
+          "type": "number",
+          "description": "Last recorded timestamp in ms"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp of last update"
+        }
+      },
+      "required": ["streak", "lastDate", "lastTimestamp"]
+    }
+  },
+  "firestore": {
+    "users": {
+      "entity": "UserStreak",
+      "description": "User streak profiles keyed by Firebase Auth UID"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Today's Water Receipt",
+  "description": "An interactive water consumption receipt generator with comparison metrics, environmental insights, and shareable social media story cards.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
