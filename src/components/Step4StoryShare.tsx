@@ -6,6 +6,8 @@ import { calcTotalUsage, formatVolume, getWaterGrade, ITEM_META, calcItemUsage }
 import { Language, translations } from '../data/translations';
 import { recordDonationEvent } from '../utils/donationApi';
 import { recordStreakCheckin, recordStreakCheckinAsync } from '../utils/streak';
+import { auth, onAuthStateChanged, getSavedRegisteredUser, User } from '../firebase';
+import { AuthModal } from './AuthModal';
 
 interface Step4StoryShareProps {
   state: WaterState;
@@ -24,6 +26,9 @@ export const Step4StoryShare: React.FC<Step4StoryShareProps> = ({
   const cardRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [streakDays, setStreakDays] = useState<number>(() => recordStreakCheckin());
+  const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [savedUser, setSavedUser] = useState(() => getSavedRegisteredUser());
 
   useEffect(() => {
     let mounted = true;
@@ -32,10 +37,21 @@ export const Step4StoryShare: React.FC<Step4StoryShareProps> = ({
         setStreakDays(updated);
       }
     });
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (mounted) {
+        setCurrentUser(user);
+        setSavedUser(getSavedRegisteredUser());
+      }
+    });
+
     return () => {
       mounted = false;
+      unsubscribe();
     };
   }, []);
+
+  const isUserRegistered = !!savedUser;
 
   const total = calcTotalUsage(state);
   const totalFormatted = formatVolume(total);
@@ -45,227 +61,177 @@ export const Step4StoryShare: React.FC<Step4StoryShareProps> = ({
   const pad = (n: number) => String(n).padStart(2, '0');
   const dateStr = `${now.getFullYear()}.${pad(now.getMonth() + 1)}.${pad(now.getDate())}`;
   const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-
-  const receiptNo = useMemo(() => {
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
-    const yy = String(now.getFullYear()).slice(2);
-    return `NO. ${yy}${pad(now.getMonth() + 1)}${pad(now.getDate())}-WR-${randomNum}`;
-  }, [now]);
-
-  const barcodeBars = useMemo(
-    () => [1, 2, 1, 3, 1, 2, 2, 1, 3, 1, 2, 1, 3, 2, 1, 2, 1, 3, 1, 2, 1, 2, 3, 1, 2, 1, 1, 3, 2, 1],
-    []
+  const receiptNo = useMemo(
+    () => `WR-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${Math.floor(1000 + Math.random() * 9000)}`,
+    [now]
   );
 
   const activeItems = useMemo(() => {
-    const keys = Object.keys(ITEM_META) as WaterItemKey[];
-    return keys
-      .map((key) => {
-        const usage = calcItemUsage(key, state);
-        return {
-          key,
-          emoji: ITEM_META[key].emoji,
-          label: t.items[key]?.label || key,
-          usage: Math.round(usage * 10) / 10,
-        };
-      })
-      .filter((item) => item.usage > 0);
+    return (Object.keys(ITEM_META) as WaterItemKey[])
+      .map((k) => ({
+        key: k,
+        label: t.items[k]?.label || k,
+        emoji: ITEM_META[k].emoji,
+        usage: calcItemUsage(k, state),
+      }))
+      .filter((i) => i.usage > 0);
   }, [state, t]);
 
-  const handleInstagramStory = async () => {
-    if (!cardRef.current || isGenerating) return;
+  const barcodeBars = useMemo(
+    () => [
+      2, 1, 3, 1, 2, 4, 1, 2, 1, 3, 2, 1, 4, 1, 2, 3, 1, 2, 1, 4, 2, 1, 3, 1,
+      2, 1, 4, 2, 1, 3, 2, 1, 4, 1, 2, 3, 1, 2, 1, 3, 2, 1, 4, 1, 2, 1, 3,
+    ],
+    []
+  );
 
-    try {
-      setIsGenerating(true);
-
-      // 1. Call Donation Accumulation API event
-      const donationResult = await recordDonationEvent(100);
-      if (donationResult.success) {
-        showToast(t.donationSuccessToast);
-      }
-
-      // 2. Generate Story Canvas Image
-      const canvas = await safeHtml2Canvas(cardRef.current, {
-        backgroundColor: null,
-        scale: 3,
-        useCORS: true,
-      });
-
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-      if (!blob) return;
-
-      const file = new File([blob], 'water-receipt-story.png', { type: 'image/png' });
-
-      // 3. Try to copy image to clipboard so user can easily paste into Instagram Story
-      if (navigator.clipboard && window.ClipboardItem) {
-        try {
-          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-        } catch {
-          // Clipboard access skipped
-        }
-      }
-
-      // 4. Try Native File Share on mobile devices (iOS Safari / Android)
-      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({
-            files: [file],
-            title: t.appTitle,
-            text: `${t.appTitle} 💧 ${totalFormatted}L (${grade.title})`,
-          });
-          return;
-        } catch {
-          // User dismissed native share sheet
-        }
-      }
-
-      // 5. Deep Link to Instagram Story Camera app on mobile / fallback to Web
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      
-      // Auto-download image so it's in the device gallery/downloads
-      const link = document.createElement('a');
-      link.download = 'water-receipt-story.png';
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-
-      if (isMobile) {
-        const deepLink = 'instagram-stories://share';
-        const fallbackDeepLink = 'instagram://story-camera';
-        const startTime = Date.now();
-
-        window.location.href = deepLink;
-
-        setTimeout(() => {
-          if (Date.now() - startTime < 1800) {
-            window.location.href = fallbackDeepLink;
-            setTimeout(() => {
-              if (Date.now() - startTime < 2800) {
-                window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer');
-              }
-            }, 800);
-          }
-        }, 800);
-      } else {
-        setTimeout(() => {
-          window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer');
-        }, 800);
-      }
-    } catch (err) {
-      console.error('Failed to prepare Instagram story:', err);
-    } finally {
-      setIsGenerating(false);
-    }
+  const generateBlob = async (): Promise<Blob | null> => {
+    if (!cardRef.current) return null;
+    const canvas = await safeHtml2Canvas(cardRef.current, {
+      scale: 3,
+      useCORS: true,
+      backgroundColor: undefined,
+    });
+    return new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((b) => resolve(b), 'image/png', 1.0);
+    });
   };
 
-  const handleCopyImage = async () => {
-    if (!cardRef.current || isGenerating) return;
+  const handleInstagramStory = async () => {
+    setIsGenerating(true);
     try {
-      setIsGenerating(true);
+      recordDonationEvent(100);
 
-      await recordDonationEvent(100);
+      const blob = await generateBlob();
+      if (!blob) {
+        showToast(t.donationSuccessToast);
+        setTimeout(() => {
+          window.location.href = 'https://www.instagram.com/';
+        }, 1200);
+        return;
+      }
 
-      const canvas = await safeHtml2Canvas(cardRef.current, {
-        backgroundColor: null,
-        scale: 3,
-        useCORS: true,
-      });
+      const file = new File([blob], `water_receipt_${receiptNo}.png`, { type: 'image/png' });
+      const nav = navigator as any;
 
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-      if (!blob) return;
-
-      if (navigator.clipboard && window.ClipboardItem) {
+      if (nav.canShare && nav.canShare({ files: [file] })) {
         try {
-          await navigator.clipboard.write([
-            new ClipboardItem({ 'image/png': blob }),
-          ]);
-          showToast(t.toastImgCopySuccess);
+          await nav.share({
+            files: [file],
+            title: t.appTitle,
+            text: `💧 ${t.receiptHeader} | ${t.streakBadge ? t.streakBadge.replace('{days}', String(streakDays)) : `${streakDays}일 연속`} @GoodNeighbors #물사용량영수증 #식수지원캠페인`,
+          });
           return;
-        } catch (e) {
-          console.warn('Clipboard write failed:', e);
+        } catch (err: any) {
+          if (err.name === 'AbortError') return;
         }
       }
 
-      // Fallback if clipboard write not permitted: download image
-      const link = document.createElement('a');
-      link.download = 'water-receipt-story.png';
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-      showToast(t.toastImgSuccess);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `water_receipt_story_${receiptNo}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showToast(t.donationSuccessToast);
+      setTimeout(() => {
+        window.location.href = 'https://www.instagram.com/';
+      }, 1200);
     } catch (err) {
-      console.error('Failed to copy image:', err);
+      console.error('Instagram story share failed:', err);
+      showToast(t.toastInstaRedirect);
     } finally {
       setIsGenerating(false);
     }
   };
 
   const handleSaveImage = async () => {
-    if (!cardRef.current || isGenerating) return;
+    setIsGenerating(true);
     try {
-      setIsGenerating(true);
-
-      await recordDonationEvent(100);
-
-      const canvas = await safeHtml2Canvas(cardRef.current, {
-        backgroundColor: null,
-        scale: 3,
-        useCORS: true,
-      });
-      const link = document.createElement('a');
-      link.download = 'water-receipt-story.png';
-      link.href = canvas.toDataURL('image/png');
-      link.click();
+      const blob = await generateBlob();
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `water_receipt_${receiptNo}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
       showToast(t.toastImgSuccess);
     } catch (err) {
-      console.error('Failed to save image:', err);
+      console.error('Save image error:', err);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleCopyImage = async () => {
+    setIsGenerating(true);
+    try {
+      const blob = await generateBlob();
+      if (!blob) return;
+
+      if (navigator.clipboard && window.ClipboardItem) {
+        try {
+          const item = new window.ClipboardItem({ 'image/png': blob });
+          await navigator.clipboard.write([item]);
+          showToast(t.toastImgCopySuccess);
+          return;
+        } catch (clipboardErr) {
+          console.warn('Clipboard write failed, fallback to download:', clipboardErr);
+        }
+      }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `water_receipt_${receiptNo}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast(t.toastImgSuccess);
+    } catch (err) {
+      console.error('Copy image error:', err);
     } finally {
       setIsGenerating(false);
     }
   };
 
   const handleShare = async () => {
-    if (isGenerating) return;
-
+    setIsGenerating(true);
     try {
-      setIsGenerating(true);
-      const text = `${t.appTitle} 💧 ${totalFormatted}L (${grade.title})`;
+      const text = `💧 ${t.receiptHeader}\n${dateStr} 총 물 사용량: ${totalFormatted}L (${grade.title})\n💧 ${t.streakBadge ? t.streakBadge.replace('{days}', String(streakDays)) : `${streakDays}일 연속 기록 중!`}\n\n👉 나의 물 사용량도 계산해보기:\n${window.location.href}`;
+      const nav = navigator as any;
 
-      await recordDonationEvent(100);
-
-      if (navigator.share && cardRef.current) {
+      if (nav.share) {
         try {
-          const canvas = await safeHtml2Canvas(cardRef.current, {
-            backgroundColor: null,
-            scale: 3,
-            useCORS: true,
+          await nav.share({
+            title: t.appTitle,
+            text,
+            url: window.location.href,
           });
-
-          const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-          if (blob) {
-            const file = new File([blob], 'water-receipt.png', { type: 'image/png' });
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-              try {
-                await navigator.share({ text, files: [file] });
-                return;
-              } catch (e) {
-                console.warn('File share cancelled or failed:', e);
-                if (e instanceof Error && (e.name === 'AbortError' || e.name === 'InvalidStateError')) {
-                  return;
-                }
-              }
-            }
-          }
-
-          try {
-            await navigator.share({ text });
-          } catch (e) {
-            console.warn('Text share cancelled or failed:', e);
-          }
-        } catch (e) {
-          console.warn('Share operation cancelled or failed:', e);
+          return;
+        } catch (err: any) {
+          if (err.name === 'AbortError') return;
         }
+      }
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        showToast(t.toastCopySuccess);
       } else {
         try {
-          await navigator.clipboard.writeText(text);
+          const textArea = document.createElement('textarea');
+          textArea.value = text;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
           showToast(t.toastCopySuccess);
         } catch (e) {
           showToast(text);
@@ -301,6 +267,44 @@ export const Step4StoryShare: React.FC<Step4StoryShareProps> = ({
           {t.step4Desc}
         </p>
       </header>
+
+      {/* Streak Protection / Cloud Sync Retention Card */}
+      <div className="bg-gradient-to-br from-cyan-950/70 via-slate-900 to-slate-950 border border-cyan-500/40 rounded-3xl p-4 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-3 relative overflow-hidden">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="w-10 h-10 rounded-2xl bg-cyan-500/10 border border-cyan-400/40 flex items-center justify-center text-xl shrink-0">
+            {isUserRegistered ? '✅' : '🔥'}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-bold text-slate-100">
+                {t.saveStreakBannerTitle ? t.saveStreakBannerTitle.replace('{days}', String(streakDays)) : `💧 연속 ${streakDays}일 기록 중!`}
+              </h4>
+              {isUserRegistered && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40">
+                  {t.accountBadge || '동기화 계정'}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5 leading-snug">
+              {isUserRegistered
+                ? (t.saveStreakBannerLoggedIn || '연속 기록이 클라우드 계정에 안전하게 동기화 중입니다.')
+                : (t.saveStreakBannerDesc || '간편 가입하고 기기가 바뀌어도 연속 기록을 영구 보관하세요.')}
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setIsAuthModalOpen(true)}
+          className={`w-full sm:w-auto px-4 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer shrink-0 shadow-md ${
+            isUserRegistered
+              ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+              : 'bg-gradient-to-r from-cyan-500 to-emerald-500 hover:opacity-95 text-slate-950 shadow-[0_4px_14px_rgba(6,182,212,0.3)] active:scale-95'
+          }`}
+        >
+          {isUserRegistered ? (t.authAccountTitle || '내 계정 관리') : (t.saveStreakBannerBtn || '내 연속 기록 저장하기')}
+        </button>
+      </div>
 
       {/* 9:16 Instagram Story Canvas Frame */}
       <div className="mx-auto w-full max-w-[320px]">
@@ -436,6 +440,19 @@ export const Step4StoryShare: React.FC<Step4StoryShareProps> = ({
           {t.restartBtn}
         </button>
       </div>
+
+      {/* Account / Streak Retention Auth Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => {
+          setIsAuthModalOpen(false);
+          setSavedUser(getSavedRegisteredUser());
+        }}
+        lang={lang}
+        streakDays={streakDays}
+        currentUser={currentUser}
+        showToast={showToast}
+      />
     </motion.div>
   );
 };

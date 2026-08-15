@@ -2,7 +2,7 @@
   "entities": {
     "UserStreak": {
       "title": "User Streak",
-      "description": "User water receipt streak data",
+      "description": "User water receipt streak data and account info",
       "type": "object",
       "properties": {
         "streak": {
@@ -17,18 +17,58 @@
           "type": "number",
           "description": "Last recorded timestamp in ms"
         },
+        "username": {
+          "type": "string",
+          "description": "User handle or display id"
+        },
+        "passwordHash": {
+          "type": "string",
+          "description": "Hashed password for id-based auth fallback"
+        },
+        "isRegistered": {
+          "type": "boolean",
+          "description": "Whether user registered an ID"
+        },
         "updatedAt": {
           "type": "string",
           "description": "Timestamp of last update"
         }
       },
       "required": ["streak", "lastDate", "lastTimestamp"]
+    },
+    "AccountIdMap": {
+      "title": "Account ID Mapping",
+      "description": "Maps username ID to uid and credentials",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID"
+        },
+        "username": {
+          "type": "string",
+          "description": "Registered username ID"
+        },
+        "passwordHash": {
+          "type": "string",
+          "description": "SHA-256 hash of password"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["uid", "username", "passwordHash"]
     }
   },
   "firestore": {
     "users": {
       "entity": "UserStreak",
       "description": "User streak profiles keyed by Firebase Auth UID"
+    },
+    "accounts": {
+      "entity": "AccountIdMap",
+      "description": "Unique username index mapped to account data"
     }
   }
 }

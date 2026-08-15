@@ -74,37 +74,51 @@ export const ITEM_META: Record<WaterItemKey, ItemMeta> = {
 };
 
 export function calcItemUsage(key: WaterItemKey, state: WaterState): number {
+  if (!state) return 0;
   switch (key) {
     case 'shower': {
+      if (!state.shower) return 0;
       let runRate = RATE_SHOWER_RUNNING;
       let saveRate = RATE_SHOWER_SAVING;
-      if (state.shower.gender === 'male') {
+      const gender = state.shower.gender || 'male';
+      if (gender === 'male') {
         runRate = RATE_SHOWER_MALE_RUNNING;
         saveRate = RATE_SHOWER_MALE_SAVING;
-      } else if (state.shower.gender === 'female') {
+      } else if (gender === 'female') {
         runRate = RATE_SHOWER_FEMALE_RUNNING;
         saveRate = RATE_SHOWER_FEMALE_SAVING;
       }
-      return state.shower.minutes * (state.shower.runningTap ? runRate : saveRate);
+      const minutes = state.shower.minutes || 0;
+      const isRunningTap = state.shower.runningTap ?? true;
+      return minutes * (isRunningTap ? runRate : saveRate);
     }
     case 'handwash':
-      return state.handwash.count * (state.handwash.runningTap ? RATE_HANDWASH_TAP : RATE_HANDWASH_SAVING);
+      if (!state.handwash) return 0;
+      return (state.handwash.count || 0) * (state.handwash.runningTap ? RATE_HANDWASH_TAP : RATE_HANDWASH_SAVING);
     case 'laundry':
-      return state.laundry.count * RATE_LAUNDRY;
+      if (!state.laundry) return 0;
+      return (state.laundry.count || 0) * RATE_LAUNDRY;
     case 'toilet':
-      return state.toilet.count * RATE_TOILET;
+      if (!state.toilet) return 0;
+      return (state.toilet.count || 0) * RATE_TOILET;
     case 'dish':
-      return state.dish.count * (state.dish.runningTap ? RATE_DISH_RUNNING : RATE_DISH_SAVING);
+      if (!state.dish) return 0;
+      return (state.dish.count || 0) * (state.dish.runningTap ? RATE_DISH_RUNNING : RATE_DISH_SAVING);
     case 'cooking':
-      return state.cooking.count * RATE_COOKING;
+      if (!state.cooking) return 0;
+      return (state.cooking.count || 0) * RATE_COOKING;
     case 'tumbler':
-      return state.tumbler.count * RATE_TUMBLER;
+      if (!state.tumbler) return 0;
+      return (state.tumbler.count || 0) * RATE_TUMBLER;
     case 'brush':
-      return state.brush.count * (state.brush.cup ? RATE_BRUSH_CUP : RATE_BRUSH_TAP);
+      if (!state.brush) return 0;
+      return (state.brush.count || 0) * (state.brush.cup ? RATE_BRUSH_CUP : RATE_BRUSH_TAP);
     case 'water':
-      return state.water.cups * RATE_CUP;
+      if (!state.water) return 0;
+      return (state.water.cups || 0) * RATE_CUP;
     case 'drink':
-      return state.drink.count * RATE_DRINK;
+      if (!state.drink) return 0;
+      return (state.drink.count || 0) * RATE_DRINK;
     default:
       return 0;
   }
