@@ -71,10 +71,10 @@ export const Step3Analysis: React.FC<Step3AnalysisProps> = ({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 14 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -14 }}
-      transition={{ duration: 0.3 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.15, ease: 'easeOut' }}
       className="space-y-5"
     >
       <header>
