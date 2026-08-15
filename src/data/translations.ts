@@ -62,7 +62,7 @@ export const translations = {
     toastInstaRedirect: "이미지 저장 완료! 인스타그램에 바로 공유해보세요 📸",
 
     // Streak & Account Retention Banner / Modal
-    saveStreakBannerTitle: "💧 연속 {days}일 기록 중!",
+    saveStreakBannerTitle: "연속 {days}일 기록 중!",
     saveStreakBannerDesc: "아이디만 등록하면 기기가 바뀌어도 연속 기록을 영구 보관해요.",
     saveStreakBannerBtn: "내 연속 기록 저장하기",
     saveStreakBannerLoggedIn: "연속 기록이 클라우드 계정에 안전하게 동기화 중입니다.",
@@ -229,7 +229,7 @@ export const translations = {
     toastInstaRedirect: "Image saved! Upload it to your Instagram Story 📸",
 
     // Streak & Account Retention Banner / Modal
-    saveStreakBannerTitle: "💧 {days} Day Streak Active!",
+    saveStreakBannerTitle: "{days} Day Streak Active!",
     saveStreakBannerDesc: "Create a User ID to keep your streak safe forever across devices.",
     saveStreakBannerBtn: "Save My Streak",
     saveStreakBannerLoggedIn: "Your streaks are securely synced with your cloud account.",
@@ -395,7 +395,7 @@ export const translations = {
     toastInstaRedirect: "画像を保存しました！Instagramで共有しよう 📸",
 
     // Streak & Account Retention Banner / Modal
-    saveStreakBannerTitle: "💧 連続 {days}日記録中！",
+    saveStreakBannerTitle: "連続 {days}日記録中！",
     saveStreakBannerDesc: "IDを登録するだけで端末が変わっても連続記録を永久保存できます。",
     saveStreakBannerBtn: "連続記録を保存する",
     saveStreakBannerLoggedIn: "連続記録がクラウドアカウントに安全に同期されています。",
@@ -561,7 +561,7 @@ export const translations = {
     toastInstaRedirect: "图片已保存！可直接上传至 Instagram 📸",
 
     // Streak & Account Retention Banner / Modal
-    saveStreakBannerTitle: "💧 连续 {days}天打卡！",
+    saveStreakBannerTitle: "连续 {days}天打卡！",
     saveStreakBannerDesc: "设置账号ID后更换设备也能永久保留连续打卡记录。",
     saveStreakBannerBtn: "保存我的连续记录",
     saveStreakBannerLoggedIn: "连续记录已安全同步至您的云端账号。",

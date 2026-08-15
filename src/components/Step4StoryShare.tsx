@@ -271,13 +271,15 @@ export const Step4StoryShare: React.FC<Step4StoryShareProps> = ({
       {/* Streak Protection / Cloud Sync Retention Card */}
       <div className="bg-gradient-to-br from-cyan-950/70 via-slate-900 to-slate-950 border border-cyan-500/40 rounded-3xl p-4 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-3 relative overflow-hidden">
         <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="w-10 h-10 rounded-2xl bg-cyan-500/10 border border-cyan-400/40 flex items-center justify-center text-xl shrink-0">
-            {isUserRegistered ? '✅' : '🔥'}
-          </div>
+          {isUserRegistered && (
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-400/40 flex items-center justify-center text-lg shrink-0">
+              ✅
+            </div>
+          )}
           <div>
             <div className="flex items-center gap-2">
               <h4 className="text-sm font-bold text-slate-100">
-                {t.saveStreakBannerTitle ? t.saveStreakBannerTitle.replace('{days}', String(streakDays)) : `💧 연속 ${streakDays}일 기록 중!`}
+                {t.saveStreakBannerTitle ? t.saveStreakBannerTitle.replace('{days}', String(streakDays)) : `연속 ${streakDays}일 기록 중!`}
               </h4>
               {isUserRegistered && (
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40">
@@ -288,7 +290,7 @@ export const Step4StoryShare: React.FC<Step4StoryShareProps> = ({
             <p className="text-xs text-slate-400 mt-0.5 leading-snug">
               {isUserRegistered
                 ? (t.saveStreakBannerLoggedIn || '연속 기록이 클라우드 계정에 안전하게 동기화 중입니다.')
-                : (t.saveStreakBannerDesc || '간편 가입하고 기기가 바뀌어도 연속 기록을 영구 보관하세요.')}
+                : (t.saveStreakBannerDesc || '아이디만 등록하면 기기가 바뀌어도 연속 기록을 영구 보관해요.')}
             </p>
           </div>
         </div>
