@@ -131,17 +131,17 @@ export const Step1Checklist: React.FC<Step1ChecklistProps> = ({
           </div>
 
           {/* Gender selection button row */}
-          <div className="mt-3 pt-2.5 border-t border-slate-700/50">
-            <p className="text-[11px] font-bold text-slate-300 mb-1.5 flex items-center justify-between">
+          <div className="mt-3 pt-2.5 border-t border-slate-700/60">
+            <p className="text-xs font-bold text-slate-300 mb-1.5 flex items-center justify-between">
               <span>{t.items.shower.genderLabel}</span>
             </p>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => updateShowerGender('male')}
-                className={`py-1.5 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                className={`py-2 px-3 rounded-xl border text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                   state.shower.gender === 'male' || !state.shower.gender
-                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/60 shadow-sm'
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/60 shadow-sm ring-1 ring-emerald-500/30'
                     : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-slate-200'
                 }`}
               >
@@ -150,9 +150,9 @@ export const Step1Checklist: React.FC<Step1ChecklistProps> = ({
               <button
                 type="button"
                 onClick={() => updateShowerGender('female')}
-                className={`py-1.5 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                className={`py-2 px-3 rounded-xl border text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                   state.shower.gender === 'female'
-                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/60 shadow-sm'
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/60 shadow-sm ring-1 ring-emerald-500/30'
                     : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-slate-200'
                 }`}
               >
@@ -169,10 +169,10 @@ export const Step1Checklist: React.FC<Step1ChecklistProps> = ({
               step={1}
               value={state.shower.minutes}
               onChange={(e) => updateShowerMinutes(Number(e.target.value))}
-              className="w-full cursor-pointer accent-emerald-500 h-1.5 rounded-lg bg-slate-900"
+              className="w-full cursor-pointer accent-emerald-500 h-2 rounded-lg bg-slate-900"
             />
 
-            <div className="relative w-full h-7">
+            <div className="relative w-full h-8">
               {[
                 { val: 0, label: t.showerMinutes.zero },
                 { val: 10, label: t.showerMinutes.m10 },
@@ -195,7 +195,7 @@ export const Step1Checklist: React.FC<Step1ChecklistProps> = ({
                     type="button"
                     onClick={() => updateShowerMinutes(item.val)}
                     style={{ left: `${pct}%` }}
-                    className={`absolute top-0 py-0.5 px-1.5 sm:px-2 rounded-full text-[9px] sm:text-[10px] font-bold border transition-all cursor-pointer whitespace-nowrap ${transformStyle} ${
+                    className={`absolute top-0 py-1 px-2 sm:px-2.5 rounded-full text-[10px] sm:text-xs font-bold border transition-all cursor-pointer whitespace-nowrap ${transformStyle} ${
                       isSelected
                         ? 'bg-emerald-500 text-slate-950 border-emerald-500 shadow-sm z-10 scale-105'
                         : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-slate-200'
@@ -209,18 +209,31 @@ export const Step1Checklist: React.FC<Step1ChecklistProps> = ({
           </div>
 
           {state.shower.minutes > 0 && (
-            <div className="mt-2.5 pt-2 border-t border-slate-700/50 flex justify-end">
-              <button
-                type="button"
-                onClick={toggleShowerRunningTap}
-                className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-colors cursor-pointer ${
-                  state.shower.runningTap
-                    ? 'bg-rose-500/10 text-rose-300 border-rose-500/30 hover:bg-rose-500/20'
-                    : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
-                }`}
-              >
-                {state.shower.runningTap ? t.items.shower.runningTapOn : t.items.shower.runningTapOff}
-              </button>
+            <div className="mt-3 pt-2.5 border-t border-slate-700/60">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => state.shower.runningTap || toggleShowerRunningTap()}
+                  className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 text-center ${
+                    state.shower.runningTap
+                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-sm'
+                      : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-slate-200'
+                  }`}
+                >
+                  {t.items.shower.runningTapOn}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => !state.shower.runningTap || toggleShowerRunningTap()}
+                  className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 text-center ${
+                    !state.shower.runningTap
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/60 shadow-sm ring-1 ring-emerald-500/30'
+                      : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-slate-200'
+                  }`}
+                >
+                  {t.items.shower.runningTapOff}
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -256,18 +269,31 @@ export const Step1Checklist: React.FC<Step1ChecklistProps> = ({
           </div>
 
           {state.handwash.count > 0 && (
-            <div className="mt-2.5 pt-2 border-t border-slate-700/50 flex justify-end">
-              <button
-                type="button"
-                onClick={toggleHandwashRunningTap}
-                className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-colors cursor-pointer ${
-                  state.handwash.runningTap
-                    ? 'bg-rose-500/10 text-rose-300 border-rose-500/30 hover:bg-rose-500/20'
-                    : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
-                }`}
-              >
-                {state.handwash.runningTap ? t.items.handwash.runningTapOn : t.items.handwash.runningTapOff}
-              </button>
+            <div className="mt-3 pt-2.5 border-t border-slate-700/60">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => state.handwash.runningTap || toggleHandwashRunningTap()}
+                  className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 text-center ${
+                    state.handwash.runningTap
+                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-sm'
+                      : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-slate-200'
+                  }`}
+                >
+                  {t.items.handwash.runningTapOn}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => !state.handwash.runningTap || toggleHandwashRunningTap()}
+                  className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 text-center ${
+                    !state.handwash.runningTap
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/60 shadow-sm ring-1 ring-emerald-500/30'
+                      : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-slate-200'
+                  }`}
+                >
+                  {t.items.handwash.runningTapOff}
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -303,18 +329,31 @@ export const Step1Checklist: React.FC<Step1ChecklistProps> = ({
           </div>
 
           {state.brush.count > 0 && (
-            <div className="mt-2.5 pt-2 border-t border-slate-700/50 flex justify-end">
-              <button
-                type="button"
-                onClick={toggleBrushCup}
-                className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-colors cursor-pointer ${
-                  state.brush.cup
-                    ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
-                    : 'bg-rose-500/10 text-rose-300 border-rose-500/30 hover:bg-rose-500/20'
-                }`}
-              >
-                {state.brush.cup ? t.items.brush.cupOn : t.items.brush.cupOff}
-              </button>
+            <div className="mt-3 pt-2.5 border-t border-slate-700/60">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => !state.brush.cup || toggleBrushCup()}
+                  className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 text-center ${
+                    !state.brush.cup
+                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-sm'
+                      : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-slate-200'
+                  }`}
+                >
+                  {t.items.brush.cupOff}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => state.brush.cup || toggleBrushCup()}
+                  className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 text-center ${
+                    state.brush.cup
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/60 shadow-sm ring-1 ring-emerald-500/30'
+                      : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-slate-200'
+                  }`}
+                >
+                  {t.items.brush.cupOn}
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -426,18 +465,31 @@ export const Step1Checklist: React.FC<Step1ChecklistProps> = ({
           </div>
 
           {state.dish.count > 0 && (
-            <div className="mt-2.5 pt-2 border-t border-slate-700/50 flex justify-end">
-              <button
-                type="button"
-                onClick={toggleDishRunningTap}
-                className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-colors cursor-pointer ${
-                  state.dish.runningTap
-                    ? 'bg-rose-500/10 text-rose-300 border-rose-500/30 hover:bg-rose-500/20'
-                    : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
-                }`}
-              >
-                {state.dish.runningTap ? t.items.dish.runningTapOn : t.items.dish.runningTapOff}
-              </button>
+            <div className="mt-3 pt-2.5 border-t border-slate-700/60">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => state.dish.runningTap || toggleDishRunningTap()}
+                  className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 text-center ${
+                    state.dish.runningTap
+                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-sm'
+                      : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-slate-200'
+                  }`}
+                >
+                  {t.items.dish.runningTapOn}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => !state.dish.runningTap || toggleDishRunningTap()}
+                  className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 text-center ${
+                    !state.dish.runningTap
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/60 shadow-sm ring-1 ring-emerald-500/30'
+                      : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-slate-200'
+                  }`}
+                >
+                  {t.items.dish.runningTapOff}
+                </button>
+              </div>
             </div>
           )}
         </div>
