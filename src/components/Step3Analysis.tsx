@@ -156,6 +156,13 @@ export const Step3Analysis: React.FC<Step3AnalysisProps> = ({
             {diffText}
           </span>
         </p>
+
+        {countryInfo.source && (
+          <div className="mt-3.5 pt-2.5 border-t border-slate-700/50 flex items-start gap-1.5 text-[10px] text-slate-400">
+            <span className="font-mono text-emerald-400 shrink-0 font-semibold">[{t.statSourcePrefix || '출처'}]</span>
+            <span className="leading-tight text-slate-400">{countryInfo.source[lang]}</span>
+          </div>
+        )}
       </div>
 
       {/* Water Scarcity Check */}
